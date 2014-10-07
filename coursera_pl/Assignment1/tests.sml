@@ -42,8 +42,12 @@ val test_number_in_months =
         val e = 2 = number_in_months(dates'', months'')
         val dates''' = (2000, 4, 14) :: dates''
         val f = 2 = number_in_months(dates''', months'')
+        val g = 4 = number_in_months([(1,2,25),(3,5,26),(1,12,29),(3,2,28),(1,2,27),(6,7,8)], [2])
+        val h = 4 = number_in_months([(1,2,25),(3,2,28),(1,2,27),(1,2,25)], [2])
+        val i = 6 = number_in_months([(1,2,25),(3,5,26),(1,12,29),(3,2,28),(1,2,27),(1,2,25),(6,7,8)], [2,7,5])
+        val j = 4 = number_in_months([(1,2,25),(3,2,28),(1,2,27),(1,2,25)], [2,12])
     in
-        a andalso b andalso c andalso d andalso e andalso f
+        a andalso b andalso c andalso d andalso e andalso f andalso g andalso h andalso i andalso j
     end
 
 val test_dates_in_month = 
@@ -154,8 +158,9 @@ val test_number_in_months_challenge =
         val e = 2 = number_in_months_challenge(dates'', months'')
         val dates''' = (2000, 4, 14) :: dates''
         val f = 2 = number_in_months_challenge(dates''', months'')
+        val g = 4 = number_in_months_challenge([(1,2,25),(3,2,28),(1,2,27),(1,2,25)], [2,2,12,2,2,12,12,12])
     in
-        a andalso b andalso c andalso d andalso e andalso f
+        a andalso b andalso c andalso d andalso e andalso f andalso g
     end
 
 val test_dates_in_months_challenge =

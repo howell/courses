@@ -37,9 +37,7 @@ fun number_in_months(dates : (int*int*int) list, months : int list) =
     else let val month = hd months
              val rest = tl months
          in
-             if number_in_month(dates, month) > 0
-             then 1 + number_in_months(dates, rest)
-             else number_in_months(dates, rest)
+             number_in_month(dates, month) + number_in_months(dates, rest)
          end
 
 fun dates_in_month(dates : (int*int*int) list, month : int) =
