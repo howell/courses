@@ -100,11 +100,9 @@ fun what_month(day : int) =
 fun month_range(day1 : int, day2 : int) =
     if day1 > day2
     then []
-    else let val month1 = what_month day1
-             val month2 = what_month day2
-             fun go(m) = if m = month2 then [m] else m :: go(m + 1)
+    else let val month = what_month day1
          in
-             go month1
+             month :: month_range(day1 + 1, day2)
          end
 
 fun oldest(dates : (int*int*int) list) =
