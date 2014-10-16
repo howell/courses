@@ -137,3 +137,16 @@ val test_officiate =
     in
         a andalso b andalso c
     end
+
+val all_tests_passing =
+    test_all_except_option andalso
+    test_get_substitutions1 andalso
+    test_get_substitutions2 andalso
+    test_similar_names andalso
+    test_card_color andalso
+    test_card_value andalso
+    test_remove_card andalso
+    test_all_same_color andalso
+    test_sum_cards andalso
+    test_score andalso
+    test_officiate
