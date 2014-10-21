@@ -38,4 +38,11 @@ datatype typ = Anything
 	     | TupleT of typ list
 	     | Datatype of string
 
-(**** you can put all your code here ****)
+(* Flip the order a function takes its arguments *)
+fun flip f a b = f b a
+
+fun curry f a b = f (a,b)
+
+fun uncurry f (a,b) = f a b
+
+val only_capitals = List.filter (Char.isUpper o flip (curry String.sub) 0)
