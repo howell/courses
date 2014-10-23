@@ -46,3 +46,18 @@ fun curry f a b = f (a,b)
 fun uncurry f (a,b) = f a b
 
 val only_capitals = List.filter (Char.isUpper o flip (curry String.sub) 0)
+
+(* favor the second argument *)
+fun longer_string a b = if String.size a > String.size b then a else b
+
+val longest_string1 = List.foldl (uncurry longer_string) ""
+
+val longest_string2 = longest_string1 o List.rev
+
+val longest_string2' = List.foldl (uncurry (flip longer_string)) ""
+
+fun longest_string_helper p =
+    let fun helper (s,acc) = if p (String.size acc, String.size s) then s else acc
+    in
+        List.foldl helper ""
+    end
