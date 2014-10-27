@@ -52,12 +52,41 @@ fun longer_string a b = if String.size a > String.size b then a else b
 
 val longest_string1 = List.foldl (uncurry longer_string) ""
 
-val longest_string2 = longest_string1 o List.rev
+val longest_string2' = longest_string1 o List.rev
 
-val longest_string2' = List.foldl (uncurry (flip longer_string)) ""
+val longest_string2 = List.foldl (uncurry (flip longer_string)) ""
 
 fun longest_string_helper p =
-    let fun helper (s,acc) = if p (String.size acc, String.size s) then s else acc
+    let fun helper (s,acc) = if p (String.size s, String.size acc) then s else acc
     in
         List.foldl helper ""
+    end
+
+fun gt a b = a > b
+fun gte a b = a >= b
+
+val longest_string3 = longest_string_helper (uncurry gt)
+
+val longest_string4 = longest_string_helper (uncurry gte)
+
+val longest_capitalized = longest_string1 o only_capitals
+
+val rev_string = String.implode o rev o String.explode
+
+fun first_answer p xs =
+    case xs of
+        []        => raise NoAnswer
+      | x :: xs'  => (case p x of
+                          NONE   => first_answer p xs'
+                        | SOME a => a)
+
+fun all_answers p =
+    let fun go acc xs =
+        case xs of
+            []        => SOME acc
+          | x :: xs'  => case p x of
+                             NONE     => NONE
+                           | SOME bs  => go (acc @ bs) xs'
+    in
+        go []
     end
