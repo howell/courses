@@ -103,3 +103,46 @@ val test_count_wild_and_variable_lengths =
     in
         a andalso b andalso c
     end
+
+val test_count_some_var =
+    let val a = count_some_var ("x", Variable("x")) = 1
+        val b = count_some_var ("x", Variable("xyz")) = 0
+        val c = count_some_var ("foo", UnitP) = 0
+        val d = count_some_var ("x", TupleP [Variable "x", Wildcard, Variable "x"]) = 2
+    in
+        a andalso b andalso c andalso d
+    end
+
+val test_check_pat =
+    let val a = check_pat (Variable("x")) = true
+        val b = check_pat (TupleP [Variable "x", Variable "y"]) = true
+        val c = check_pat (TupleP [Variable "x", Variable "x"]) = false
+    in
+        a andalso b andalso c
+    end
+
+val test_match =
+    let val a = match (Const(1), UnitP) = NONE
+        val b = match (Const 1, ConstP 1) = SOME []
+        val c = match (Const 1, ConstP 2) = NONE
+        val d = match (Unit, UnitP) = SOME []
+        val e = match (Const 10, Wildcard) = SOME []
+        val f = match (Const 3, Variable "x") = SOME [("x", Const 3)]
+        val g = match (Constructor ("x", Unit), ConstructorP ("x", Variable "y")) = SOME [("y", Unit)]
+        val h = match (Constructor ("x", Unit), ConstructorP ("z", Variable "y")) = NONE
+        val i = match (Tuple [Const 1], TupleP [Variable "x"]) = SOME [("x", Const 1)]
+        val j = match (Tuple [Unit, Unit], TupleP [UnitP]) = NONE
+        val k = match (Tuple [Unit, Const 1], TupleP [UnitP, UnitP]) = NONE
+    in
+        a andalso b andalso c andalso d andalso e andalso f andalso g andalso
+        h andalso i andalso j andalso k
+    end
+
+val test_first_match =
+    let val a = first_match Unit [UnitP] = SOME []
+        val b = first_match Unit [] = NONE
+        val c = first_match (Const 1) [UnitP] = NONE
+        val d = first_match (Const 2) [Variable "x", Variable "y"] = SOME [("x", Const 2)]
+    in
+        a andalso b andalso c andalso d
+    end

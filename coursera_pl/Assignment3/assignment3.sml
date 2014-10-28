@@ -45,6 +45,8 @@ fun curry f a b = f (a,b)
 
 fun uncurry f (a,b) = f a b
 
+fun const a b = a
+
 val only_capitals = List.filter (Char.isUpper o flip (curry String.sub) 0)
 
 (* favor the second argument *)
@@ -91,9 +93,37 @@ fun all_answers p =
         go []
     end
 
-fun const a b = a
-
 val count_wildcards = g (const 1) (const 0)
 
 val count_wild_and_variable_lengths = g (const 1) String.size
+
+fun count_some_var (var, pat) = g (const 0) (fn n => if n = var then 1 else 0) pat
+
+fun eq a b = a = b
+
+val check_pat =
+    let fun vars pat =
+            case pat of
+	        Variable v          => [v]
+              | ConstructorP (_, p) => vars p
+              | TupleP ps           => List.concat (List.map vars ps)
+              | _                   => []
+        fun uniq xs =
+            case xs of
+                []       => true
+              | x :: xs' => not (List.exists (eq x) xs') andalso uniq xs'
+    in
+        uniq o vars
+    end
+
+fun match (_, Wildcard)                            = SOME []
+  | match (Unit, UnitP)                            = SOME []
+  | match (v, Variable s)                          = SOME [(s, v)]
+  | match (Const n, ConstP m)                      = if n = m then SOME [] else NONE
+  | match (Constructor (s,v), ConstructorP (t, p)) = if s = t then match (v,p) else NONE
+  | match (Tuple vs, TupleP ps)                    =
+        ((all_answers match (ListPair.zipEq (vs, ps))) handle ListPair.UnequalLengths => NONE)
+  | match _                                        = NONE
+
+fun first_match v pats = SOME (first_answer (curry match v) pats) handle NoAnswer => NONE
 
