@@ -83,3 +83,23 @@ val test_all_answers =
     in
         a andalso b andalso c andalso d
     end
+
+val test_count_wildcards =
+    let val a = count_wildcards Wildcard = 1
+        val b = count_wildcards (Variable "hi") = 0
+        val c = count_wildcards UnitP = 0
+        val d = count_wildcards (TupleP []) = 0
+        val e = count_wildcards (ConstructorP ("Foo", UnitP)) = 0
+        val f = count_wildcards (TupleP [Wildcard, UnitP, Wildcard]) = 2
+        val g = count_wildcards (ConstructorP ("Baz", TupleP [TupleP [Wildcard], Wildcard])) = 2
+    in
+        a andalso b andalso c andalso d andalso e andalso f andalso g
+    end
+
+val test_count_wild_and_variable_lengths =
+    let val a = count_wild_and_variable_lengths (Variable("a")) = 1
+        val b = count_wild_and_variable_lengths (ConstructorP ("Foo", UnitP)) = 0
+        val c = count_wild_and_variable_lengths (TupleP [Wildcard, Variable "fooz"]) = 5
+    in
+        a andalso b andalso c
+    end

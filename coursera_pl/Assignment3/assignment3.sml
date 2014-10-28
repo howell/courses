@@ -90,3 +90,10 @@ fun all_answers p =
     in
         go []
     end
+
+fun const a b = a
+
+val count_wildcards = g (const 1) (const 0)
+
+val count_wild_and_variable_lengths = g (const 1) String.size
+
