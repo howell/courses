@@ -77,3 +77,12 @@
                           (set! insert-position (remainder (+ insert-position 1) n))
                           ans)))))])
     f))
+
+(define-syntax while-less
+  (syntax-rules (do)
+    [(while-less lim do body)
+     (letrec ([x lim]
+              [loop (lambda () (if (< body lim)
+                                   (loop)
+                                   #t))])
+       (loop))]))
