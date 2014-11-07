@@ -82,7 +82,7 @@
   (syntax-rules (do)
     [(while-less lim do body)
      (letrec ([x lim]
-              [loop (lambda () (if (< body lim)
+              [loop (lambda () (if (< body x)
                                    (loop)
                                    #t))])
        (loop))]))
