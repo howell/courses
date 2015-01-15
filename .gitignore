@@ -7,4 +7,7 @@ f
 .DS_Store
 *.tar*
 *.sml~
-.idea
+.idea/
+out/
+*.rkt~
+compiled/
