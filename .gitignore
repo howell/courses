@@ -1,0 +1,9 @@
+*.mli
+*.o
+*.cmo
+*.cmi
+parser.output
+f
+.DS_Store
+*.tar*
+*.sml~
