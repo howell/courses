@@ -22,3 +22,6 @@ lambda x:Bool. x;
 if true then {x=true,y=false,a=false} else {y=false,x={},b=false};
 
 if true then false else {};
+
+(lambda x:{x:{},y:{},z:{},a:{},b:{},c:{},d:{},e:{},f:{},g:{}}. x.y)
+  {y={},z={},f={},a={},x={},i={},b={},e={},g={},c={},h={}};

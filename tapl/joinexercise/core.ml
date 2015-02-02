@@ -13,6 +13,7 @@ let rec isval ctx t = match t with
   | _ -> false
 
 exception NoRuleApplies
+exception SubTypeExn of string
 
 let rec eval1 ctx t = match t with
     TmApp(fi,TmAbs(_,x,tyT11,t12),v2) when isval ctx v2 ->
@@ -58,21 +59,23 @@ let rec eval ctx t =
 (* ------------------------   SUBTYPING  ------------------------ *)
 
 let rec subtype tyS tyT =
-   (=) tyS tyT ||
-   match (tyS,tyT) with
+   if (=) tyS tyT
+   then ()
+   else match (tyS,tyT) with
      (_,TyTop) -> 
-       true
+         ()
    | (TyArr(tyS1,tyS2),TyArr(tyT1,tyT2)) ->
-       (subtype tyT1 tyS1) && (subtype tyS2 tyT2)
+         (match (subtype tyT1 tyS1, subtype tyS2 tyT2) with
+             ((), ()) -> ())
    | (TyRecord(fS), TyRecord(fT)) ->
-       List.for_all
+          (match List.for_all
          (fun (li,tyTi) -> 
-            try let tySi = List.assoc li fS in
-                subtype tySi tyTi
-            with Not_found -> false)
-         fT
+             try let tySi = List.assoc li fS in
+             (match subtype tySi tyTi with () -> true)
+             with Not_found -> raise (SubTypeExn ("missing label " ^ li)))
+         fT with _ -> ())
    | (_,_) -> 
-       false
+          raise (SubTypeExn "incomparable types")
 
 exception NoMeet
 
@@ -138,8 +141,8 @@ let rec typeof ctx t =
       let tyT2 = typeof ctx t2 in
       (match tyT1 with
           TyArr(tyT11,tyT12) ->
-            if subtype tyT2 tyT11 then tyT12
-            else error fi "parameter type mismatch"
+            (try (match subtype tyT2 tyT11 with () -> tyT12)
+            with SubTypeExn msg -> error fi ("Type mis-match: " ^ msg))
         | _ -> error fi "arrow type expected")
   | TmRecord(fi, fields) ->
       let fieldtys = 
