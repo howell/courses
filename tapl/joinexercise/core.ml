@@ -74,11 +74,55 @@ let rec subtype tyS tyT =
    | (_,_) -> 
        false
 
+exception NoMeet
+
+let labelunion ks ls =
+    let rec nub xs = match xs with
+                    [] -> []
+                  | (li,_)::xs' -> li :: List.filter (fun kj -> li != kj) (nub xs) in
+    nub (ks @ ls)
+
 let rec join tyS tyT =
-  (* Write me *) assert false
+    match (tyS, tyT) with
+      (TyBool,TyBool) ->
+         TyBool
+    | (TyArr(tyS1,tyS2), TyArr(tyT1,tyT2)) ->
+         (try let m = meet tyS1 tyS2 in
+              let j = join tyS2 tyT2 in
+              TyArr(m, j)
+         with NoMeet -> TyTop)
+    | (TyRecord(fieldsS), TyRecord(fieldsT)) ->
+         let memberT li = List.exists (fun (kj,_) -> li = kj) fieldsT in
+         let typeT li = List.assoc li fieldsT in
+         let commonFields = List.filter (fun (li,_) -> memberT li) fieldsS in
+         TyRecord(List.map (fun (li,tySi) -> (li, join tySi (typeT li))) commonFields)
+    | _ ->
+         TyTop
 
 and meet tyS tyT =
-  (* Write me *) assert false
+    match (tyS, tyT) with
+      (TyTop,_) ->
+         tyT
+    | (_,TyTop) ->
+         tyS
+    | (TyBool,TyBool) ->
+         TyBool
+    | (TyArr(tyS1,tyS2), TyArr(tyT1,tyT2)) ->
+         let j = join tyS1 tyS2 in
+         let m = meet tyS2 tyT2 in
+         TyArr(j,m)
+    | (TyRecord(fieldsS), TyRecord(fieldsT)) ->
+         let assoc' x xs = try Some(List.assoc x xs) with _ -> None in
+         let ms = labelunion fieldsS fieldsT in
+         let fieldTy m = (match (assoc' m fieldsS, assoc' m fieldsT) with
+            (Some(tySi), Some(tyTi)) -> meet tySi tyTi
+          | (Some(tySi), None) -> tySi
+          | (None, Some(tyTi)) -> tyTi
+          | (None, None) -> assert false) in
+         TyRecord(List.map (fun m -> (m, fieldTy m)) ms)
+    | _ ->
+         raise NoMeet
+
 
 (* ------------------------   TYPING  ------------------------ *)
 
@@ -112,4 +156,9 @@ let rec typeof ctx t =
   | TmFalse(fi) -> 
       TyBool
   | TmIf(fi,t1,t2,t3) ->
-      (* write me *) assert false
+      let tyT1 = typeof ctx t1 in
+      let tyT2 = typeof ctx t2 in
+      let tyT3 = typeof ctx t3 in
+      (match tyT1 with
+          TyBool -> join tyT2 tyT3
+        | _ -> error fi "Expected bool in if condition")
