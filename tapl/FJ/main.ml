@@ -5,11 +5,17 @@
    necessary to change this file.
 *)
 
+let main () = ()
+
+(*
+
 open Format
 open Support.Pervasive
 open Support.Error
 open Syntax
 open Core
+
+exception Bail
 
 let searchpath = ref [""]
 
@@ -82,10 +88,7 @@ let rec process_command ctx cmd = match cmd with
       force_newline();
       ctx
   | Bind(fi,x,bind) -> 
-      let bind = checkbinding fi ctx bind in
-      let bind' = evalbinding ctx bind in
-      pr x; pr " "; prbindingty ctx bind'; force_newline();
-      addbinding ctx x bind'
+          raise Bail
   
 let process_file f ctx =
   alreadyImported := f :: !alreadyImported;
@@ -112,3 +115,4 @@ let res =
   ()
 let () = print_flush()
 let () = exit res
+*)

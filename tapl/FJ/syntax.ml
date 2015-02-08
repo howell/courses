@@ -5,6 +5,7 @@ open Support.Pervasive
 (* ---------------------------------------------------------------------- *)
 (* Datatypes *)
 
+(*
 type ty =
     TyVar of int * int
   | TyId of string
@@ -16,7 +17,9 @@ type ty =
   | TyUnit
   | TyFloat
   | TyNat
+*)
 
+(*
 type term =
     TmVar of info * int * int
   | TmAbs of info * string * ty * term
@@ -38,6 +41,42 @@ type term =
   | TmPred of info * term
   | TmIsZero of info * term
   | TmInert of info * ty
+*)
+
+type ty =
+    TyObj of string
+  | TyArr of ty list * ty
+
+type term =
+    TmVar of string
+  | TmProj of term * string
+  | TmInvk of term * string * term list
+  | TmNew of string * term list
+  | TmCast of ty * term
+
+type formal = string * ty
+type field  = string * ty
+
+type constructor =
+    { ctorformals : formal list;
+      supers      : field list;
+      ctorfields  : field list;
+    }
+
+type methd =
+    { mname    : string;
+      retTy    : ty;
+      mformals : formal list;
+      mbody    : term;
+    }
+
+type classdef =
+    { cname    : string;
+      super    : string;
+      cfields  : field list;
+      ctor     : constructor;
+      methods  : methd list;
+    }
 
 type binding =
     NameBind 
@@ -93,6 +132,7 @@ let rec name2index fi ctx x =
 (* ---------------------------------------------------------------------- *)
 (* Shifting *)
 
+(*
 let tymap onvar c tyT = 
   let rec walk c tyT = match tyT with
     TyVar(x,n) -> onvar c x n
@@ -160,10 +200,25 @@ let bindingshift d bind =
                     | Some(tyT) -> Some(typeShift d tyT) in
      TmAbbBind(termShift d t, tyT_opt')
   | TyAbbBind(tyT) -> TyAbbBind(typeShift d tyT)
+*)
 
 (* ---------------------------------------------------------------------- *)
 (* Substitution *)
 
+(* x = symbol (string) to substitue;
+ * v = x's replacement (should be a value)
+ * tm = the term to search in
+ *)
+let rec termSubst x v tm =
+    match tm with
+    TmVar n -> if n = x then v else tm
+  | TmProj(tm',f) -> TmProj(termSubst x v tm', f)
+  | TmInvk(tm',m,args) -> let args' = List.map (termSubst x v) args in
+                             TmInvk(termSubst x v tm', m, args')
+  | TmNew(tyT, args) -> TmNew(tyT, List.map (termSubst x v) args)
+  | TmCast(tyT, tm') -> TmCast(tyT, termSubst x v tm')
+
+(*
 let termSubst j s t =
   tmmap
     (fun fi j x n -> if x=j then termShift j s else TmVar(fi,x,n))
@@ -187,30 +242,32 @@ let rec tytermSubst tyS j t =
 
 let tytermSubstTop tyS t = 
   termShift (-1) (tytermSubst (typeShift 1 tyS) 0 t)
+*)
 
 (* ---------------------------------------------------------------------- *)
 (* Context management (continued) *)
 
-let rec getbinding fi ctx i =
+let rec getbinding fi ctx name =
   try
-    let (_,bind) = List.nth ctx i in
-    bindingshift (i+1) bind 
-  with Failure _ ->
+    List.assoc name ctx
+  with Not_found ->
     let msg =
-      Printf.sprintf "Variable lookup failure: offset: %d, ctx size: %d" in
-    error fi (msg i (List.length ctx))
- let getTypeFromContext fi ctx i =
-   match getbinding fi ctx i with
+      Printf.sprintf "Variable lookup failure: %s, ctx size: %d" in
+    error fi (msg name (List.length ctx))
+ let getTypeFromContext ctx name =
+   match getbinding dummyinfo ctx name with
          VarBind(tyT) -> tyT
      | TmAbbBind(_,Some(tyT)) -> tyT
-     | TmAbbBind(_,None) -> error fi ("No type recorded for variable "
-                                        ^ (index2name fi ctx i))
-     | _ -> error fi 
+     | TmAbbBind(_,None) -> error dummyinfo ("No type recorded for variable "
+                                        ^ name)
+     | _ -> error dummyinfo 
        ("getTypeFromContext: Wrong kind of binding for variable " 
-         ^ (index2name fi ctx i)) 
+         ^ name) 
+
 (* ---------------------------------------------------------------------- *)
 (* Extracting file info *)
 
+(*
 let tmInfo t = match t with
     TmInert(fi,_) -> fi
   | TmVar(fi,_,_) -> fi
@@ -232,6 +289,7 @@ let tmInfo t = match t with
   | TmSucc(fi,_) -> fi
   | TmPred(fi,_) -> fi
   | TmIsZero(fi,_) -> fi 
+*)
 
 (* ---------------------------------------------------------------------- *)
 (* Printing *)
@@ -249,6 +307,7 @@ let tmInfo t = match t with
   more details. 
 *)
 
+(*
 let obox0() = open_hvbox 0
 let obox() = open_hvbox 2
 let cbox() = close_box()
@@ -412,4 +471,5 @@ let prbinding ctx b = match b with
   | TmAbbBind(t,tyT) -> pr "= "; printtm ctx t
   | TyAbbBind(tyT) -> pr "= "; printty ctx tyT 
 
+*)
 
