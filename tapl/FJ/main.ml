@@ -5,15 +5,86 @@
    necessary to change this file.
 *)
 
-let main () = ()
+open Format
+open Support.Pervasive
+open Syntax
+open Core
+
+type program = classdef list * term
+
+let fst : field = ("fst", TyObj "Object")
+let snd : field = ("snd", TyObj "Object")
+
+let setfst : methd =
+    { mname    = "setfst";
+      retTy    = TyObj "Pair";
+      mformals = [("newfst", TyObj "Object")];
+      mbody    = TmNew("Pair", [TmVar("newfst");
+                                TmProj(TmVar("this"), "snd")]);
+    }
+
+let aClass : classdef =
+    { cname = "A";
+      super = "Object";
+      cfields =  [];
+      ctor = { ctorformals = []; supers = []; ctorfields = []; };
+      methods = [];
+    }
+
+let bClass : classdef =
+    { cname = "B";
+      super = "Object";
+      cfields =  [];
+      ctor = { ctorformals = []; supers = []; ctorfields = []; };
+      methods = [];
+    }
+
+let pairClass : classdef =
+    { cname = "Pair";
+      super = "Object";
+      cfields =  [fst; snd];
+      ctor = { ctorformals = [fst; snd];
+               supers = [];
+               ctorfields = [fst; snd];
+             };
+      methods = [setfst];
+    }
+
+let ex1 =
+    let t0 = TmNew("Pair", [TmNew("A", []); TmNew("B", [])]) in
+    TmInvk(t0, "setfst", [TmNew("B", [])])
+
+let progTm =
+    let innerPr = TmNew("Pair", [TmNew("A", []); TmNew("B", [])]) in
+    let outerPr = TmNew("Pair", [innerPr; TmNew("A", [])]) in
+    let projd = TmProj(outerPr, "fst") in
+    let cast = TmCast(TyObj "Pair", projd) in
+    TmCast(TyObj "B", TmProj(cast, "snd"))
+
+let progClsses = addClasses [pairClass; aClass; bClass] emptyCT
+
+let runprogram (classes,tm) =
+    if List.for_all (classOk classes) classes
+    then
+        let ctx = emptycontext in
+        let tmTy = typeof classes ctx tm in
+        let res = eval classes ctx tm in
+        printtm ctx res;
+        pr " : ";
+        printty ctx tmTy;
+        print_newline()
+    else
+        print_string "Noooo\n"
+
+let main () =
+    let _ = runprogram (progClsses, progTm) in
+    ()
+
+let () = main ()
 
 (*
 
-open Format
-open Support.Pervasive
 open Support.Error
-open Syntax
-open Core
 
 exception Bail
 

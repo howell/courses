@@ -5,6 +5,8 @@ open Support.Pervasive
 
 (* ------------------------   Class Table  ----------------------- *)
 
+let this = TmVar("this")
+
 type classtable = classdef list
 
 let obj : classdef =
@@ -21,11 +23,13 @@ let emptyCT = [ obj ]
 
 let addClass c ct = c :: ct
 
+let addClasses cs ct = cs @ ct
+
 let lookupCT name ct = List.find (fun cls -> cls.cname = name) ct
 
 let rec foldUp fn init clsname ct =
     let rec walk acc cname =
-        let cls = lookupCT clsname ct in
+        let cls = lookupCT cname ct in
         if isObj cls
         then fn acc cls
         else walk (fn acc cls) cls.super
@@ -145,8 +149,9 @@ let methodOk ct cls mthd =
     let ctx' = addbinding ctx "this" (VarBind (TyObj cls.cname)) in
     let tyBody = typeof ct ctx' mthd.mbody in
     let mtype = mthdtype mthd in
-    subtype ct emptyctx tyBody mthd.retTy &&
-    override ct mthd.mname cls.cname mtype
+    let a = subtype ct emptyctx tyBody mthd.retTy in
+    let b = override ct mthd.mname cls.cname mtype in
+    a && b
 
 let classOk ct cls =
     let supflds = fields ct cls.super in
