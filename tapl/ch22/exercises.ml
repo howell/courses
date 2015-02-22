@@ -172,8 +172,11 @@ let test =
                 (TmApp ((TmApp(TmVar("x"), TmVar("z"))),
                        (TmApp(TmVar("y"), TmVar("z"))))))))))
 
+let test2 =
+    TmAbs("x", TyId("X"), TmVar("x"))
 
-let main () = let (tyT, _, constrs) = typeof test emptycontext uvargen in
+
+let check tm = let (tyT, _, constrs) = typeof tm emptycontext uvargen in
               print_string (showTy tyT);
               print_string "\n";
               print_string (showConstr constrs);
@@ -186,5 +189,8 @@ let main () = let (tyT, _, constrs) = typeof test emptycontext uvargen in
                     let uniTy = substTypes tyT subs in
                     print_string (showTy uniTy));
               print_string "\n"
+
+let main () = check test;
+              check test2
 
 let () = main ()
