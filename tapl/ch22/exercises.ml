@@ -133,7 +133,7 @@ let rec typeof tm ctx gen = match tm with
   | TmApp(t1,t2) ->
           let (tyT1, gen1, constrs1) = typeof t1 ctx gen in
           let (tyT2, gen2, constrs2) = typeof t2 ctx gen1 in
-          let (x, gen') = uncons gen in
+          let (x, gen') = uncons gen2 in
           let constrs = addConstr tyT1 (TyArr(tyT2,x)) (constrs1 @ constrs2) in
           (x, gen', constrs)
 
@@ -159,7 +159,19 @@ let showSubsts subs =
       | sub :: subs' -> p sub ^ ", "  ^ loop subs' in
     "[" ^ loop subs ^ "]"
 
+(*
 let test = TmApp(TmAbs("x", TyNat, TmSucc(TmSucc(TmVar("x")))), TmZero)
+let foo = TmApp (TmApp(TmVar("x"), TmVar("z"))),
+                       (TmApp(TmVar("y"), TmVar("z")))
+*)
+
+let test =
+    TmAbs("x", TyId("X"),
+        (TmAbs("y", TyId("Y"),
+            (TmAbs("z", TyId("Z"),
+                (TmApp ((TmApp(TmVar("x"), TmVar("z"))),
+                       (TmApp(TmVar("y"), TmVar("z"))))))))))
+
 
 let main () = let (tyT, _, constrs) = typeof test emptycontext uvargen in
               print_string (showTy tyT);
