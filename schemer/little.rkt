@@ -15,7 +15,7 @@
   (lambda (a l)
     (cond
       ((null? l) (quote ()))
-      ((eq? a (car l)) (cdr l))
+      ((equal? a (car l)) (cdr l))
       (else (cons (car l) (rember a (cdr l)))))))
 
 (define insertR
@@ -23,7 +23,7 @@
     (cond
       ((null? lat) (quote ()))
       (else (cond
-              ((eq? old (car lat)) (cons old (cons new (cdr lat))))
+              ((equal? old (car lat)) (cons old (cons new (cdr lat))))
               (else (cons (car lat) (insertR new old (cdr lat)))))))))
 
 (define insertL
@@ -31,7 +31,7 @@
     (cond
       ((null? lat) (quote ()))
       (else (cond
-              ((eq? old (car lat)) (cons new lat))
+              ((equal? old (car lat)) (cons new lat))
               (else (cons (car lat) (insertL new old (cdr lat)))))))))
 
 (define subst
@@ -39,7 +39,7 @@
     (cond
       ((null? lat) (quote ()))
       (else (cond
-              ((eq? old (car lat)) (cons new (cdr lat)))
+              ((equal? old (car lat)) (cons new (cdr lat)))
               (else (cons (car lat) (subst new old (cdr lat)))))))))
 
 (define subst2
@@ -47,8 +47,8 @@
     (cond
       ((null? lat) (quote ()))
       (else (cond
-              ((eq? o1 (car lat)) (cons new (cdr lat)))
-              ((eq? o2 (car lat)) (cons new (cdr lat)))
+              ((equal? o1 (car lat)) (cons new (cdr lat)))
+              ((equal? o2 (car lat)) (cons new (cdr lat)))
               (else (cons (car lat) (subst2 new o1 o2 (cdr lat)))))))))
 
 (define multirember
@@ -64,7 +64,7 @@
     (cond
       ((null? lat) lat)
       (else (cond
-              ((eq? old (car lat)) (cons old (cons new (multiinsertR new old (cdr lat)))))
+              ((equal? old (car lat)) (cons old (cons new (multiinsertR new old (cdr lat)))))
               (else (cons old (multiinsertR new old (cdr lat)))))))))
 
 (define multiinsertL
@@ -72,7 +72,7 @@
     (cond
       ((null? lat) lat)
       (else (cond
-              ((eq? old (car lat)) (cons new (cons old (multiinsertL new old (cdr lat)))))
+              ((equal? old (car lat)) (cons new (cons old (multiinsertL new old (cdr lat)))))
               (else (cons old (multiinsertL new old (cdr lat)))))))))
 
 (define multisubst
@@ -80,7 +80,7 @@
     (cond
       ((null? lat) lat)
       (else (cond
-              ((eq? old (car lat)) (cons new (multisubst new old (cdr lat))))
+              ((equal? old (car lat)) (cons new (multisubst new old (cdr lat))))
               (else (cons (car lat) (multisubst new old (cdr lat)))))))))
 
 (define add1
@@ -201,7 +201,7 @@
     (cond
       ((null? lat) 0)
       (else (cond
-              ((eq? a (car lat)) (add1 (occur a (cdr lat))))
+              ((equal? a (car lat)) (add1 (occur a (cdr lat))))
               (else (occur a (cdr lat))))))))
 
 (define one?
@@ -238,7 +238,7 @@
     (cond
       ((null? l) (0))
       ((atom? (car l)) (cond
-                         ((eq? a (car l)) (add1 (occur* a (cdr l))))
+                         ((equal? a (car l)) (add1 (occur* a (cdr l))))
                          (else (occur* a (cdr l)))))
       (else (o+ (occur* a (car l)) (occur* a (cdr l)))))))
 
@@ -247,7 +247,7 @@
     (cond
       ((null? l) (quote ()))
       ((atom? (car l)) (cond
-                         ((eq? old (car l)) (cons new (subst* new old (cdr l))))
+                         ((equal? old (car l)) (cons new (subst* new old (cdr l))))
                          (else (cons (car l) (subst* new old (cdr l))))))
       (else (cons (subst* new old (car l)) (subst* new old (cdr l)))))))
 
@@ -256,7 +256,7 @@
     (cond
       ((null? l) (quote ()))
       ((atom? (car l)) (cond
-                         ((eq? old (car l)) (cons new (cons old (insertL* new old (cdr l)))))
+                         ((equal? old (car l)) (cons new (cons old (insertL* new old (cdr l)))))
                          (else (cons (car l) (insertL* new old (cdr l))))))
       (else (cons (insertL* new old (car l)) (insertL* new old (cdr l)))))))
 
@@ -265,7 +265,7 @@
     (cond
       ((null? l) (quote ()))
       ((atom? (car l)) (cond
-                         ((eq? a (car l)) #t)
+                         ((equal? a (car l)) #t)
                          (else (member* a (cdr l)))))
       (else (or (member* a (car l)) (member* a (cdr l)))))))
 
