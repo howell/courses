@@ -508,4 +508,168 @@
 (define fullfun?
   (lambda (rel)
     (fun? (revrel rel))))
-    
+
+(define rember-f
+  (lambda (match? a l)
+    (cond
+      ((null? l) (quote ()))
+      ((match? a (car l)) (cdr l))
+      (else (cons (car l) (rember-f match? a (cdr l)))))))
+
+(define eq-c?
+  (lambda (a)
+    (lambda (x)
+      (eq? a x))))
+
+(define eq?-salad
+  (eq-c? 'salad))
+
+(define rember-fc
+  (lambda (match?)
+    (lambda (a l)
+      (cond
+        ((null? l) (quote ()))
+        ((match? a (car l)) (cdr l))
+        (else (cons (car l) ((rember-fc match?) a (cdr l))))))))
+
+(define insertL-f
+  (lambda (test?)
+    (lambda (old new lat)
+      (cond
+        ((null? lat) (quote ()))
+        (else (cond
+                ((test? old (car lat)) (cons new lat))
+                (else (cons (car lat) ((insertL-f test?) new old (cdr lat))))))))))
+
+(define insertR-f
+  (lambda (test?)
+    (lambda (new old lat)
+      (cond
+        ((null? lat) (quote ()))
+        (else (cond
+                ((test? old (car lat)) (cons old (cons new (cdr lat))))
+                (else (cons (car lat) ((insertR-f test?) new old (cdr lat))))))))))
+
+(define seqL
+  (lambda (new old l)
+    (cons new (cons old l))))
+
+(define seqR
+  (lambda (new old l)
+    (cons old (cons new l))))
+
+(define insert-g
+  (lambda (seq)
+    (lambda (new old lat)
+      (cond
+        ((null? lat) (quote ()))
+        ((eq? old (car lat)) (seq new old (cdr lat)))
+        (else (cons (car lat) ((insert-g seq) new old (cdr lat))))))))
+
+(define insertL-g
+  (insert-g seqL))
+
+(define insertR-g
+  (insert-g seqR))
+
+(define insertL-g2
+  (insert-g (lambda (new old l) (cons new (cons old l)))))
+
+(define seqS
+  (lambda (new old l)
+    (cons new l)))
+
+(define subst-g
+  (insert-g seqS))
+
+(define atom-to-function
+  (lambda (a)
+    (cond
+      ((eq? a (quote +)) o+)
+      ((eq? a (quote x)) o*)
+      (else o^))))
+
+(define value3
+  (lambda (nexp)
+    (cond
+      ((atom? nexp) nexp)
+      (else ((atom-to-function (operator nexp))
+             (value (1st-sub-exp nexp))
+             (value (2nd-sub-exp nexp)))))))
+
+(define multirember-f
+  (lambda (test?)
+    (lambda (a l)
+      (cond
+        ((null? l) (quote ()))
+        ((test? a (car l)) ((multirember-f test?) a (cdr l)))
+        (else (cons (car l) ((multirember-f test?) a (cdr l))))))))
+
+(define multirember-eq
+  (multirember-f eq?))
+
+(define multiremberT
+  (lambda (test? l)
+    (cond
+      ((null? l) (quote ()))
+      ((test? (car l)) ((multiremberT test? (cdr l))))
+      (else (cons (car l) ((multiremberT test? (cdr l))))))))
+
+(define multirember&co
+  (lambda (a lat col)
+    (cond
+      ((null? lat) (col (quote ()) (quote ())))
+      ((eq? a (car lat)) (multirember&co a (cdr lat)
+                                         (lambda (newlat seen)
+                                           (col newlat (cons (car lat) seen)))))
+      (else (multirember&co a (cdr lat)
+                            (lambda (newlat seen)
+                              (col (cons (car lat) newlat) seen)))))))
+
+(define multiinsertLR
+  (lambda (new oldL oldR lat)
+    (cond
+      ((null? lat) (quote ()))
+      ((eq? oldL (car lat)) (cons new (cons oldL (multiinsertLR new oldL oldR (cdr lat)))))
+      ((eq? oldR (car lat)) (cons oldR (cons new (multiinsertLR new oldL oldR (cdr lat)))))
+      (else (cons (car lat) (multiinsertLR new oldL oldR (cdr lat)))))))
+
+(define multiinsertLR&co
+  (lambda (new oldL oldR lat col)
+    (cond
+      ((null? lat) (col (quote ()) 0 0))
+      ((eq? oldL (car lat)) (multiinsertLR&co new oldL oldR (cdr lat)
+                                              (lambda (newlat ls rs)
+                                                (col (cons new (cons oldL newlat)) (add1 ls) rs))))
+      ((eq? oldR (car lat)) (multiinsertLR&co new oldL oldR (cdr lat)
+                                              (lambda (newlat ls rs)
+                                                (col (cons oldR (cons new newlat)) ls (add1 rs)))))
+      (else (multiinsertLR&co new oldL oldR (cdr lat)
+                              (lambda (newlat ls rs)
+                                (col (cons (car lat) newlat) ls rs)))))))
+
+(define evens-only*
+  (lambda (l)
+    (cond
+      ((null? l) (quote ()))
+      ((atom? (car l)) (cond
+                         ((even? (car l)) (cons (car l) (evens-only* (cdr l))))
+                         (else (evens-only* (cdr l)))))
+      (else (cons (evens-only* (car l)) (evens-only* (cdr l)))))))
+
+(define evens-only*&co
+  (lambda (l col)
+    (cond
+      ((null? l) (col (quote ()) 1 0))
+      ((atom? (car l)) (cond
+                         ((even? (car l)) (evens-only*&co (cdr l)
+                                                          (lambda (newl prod sum)
+                                                            (col (cons (car l) newl) (o* (car l) prod) sum))))
+                         (else (evens-only*&co (cdr l)
+                                               (lambda (newl prod sum)
+                                                 (col newl prod (o+ (car l) sum)))))))
+      (else (evens-only*&co (car l)
+                            (lambda (newl1 prod1 sum1)
+                              (evens-only*&co (cdr l)
+                                              (lambda (newl2 prod2 sum2)
+                                                (col (cons newl1 newl2) (o* prod1 prod2) (o+ sum1 sum2))))))))))
