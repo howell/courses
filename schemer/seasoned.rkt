@@ -258,16 +258,16 @@
                              (else (cons av (cdr l))))))))])
       (loop l))))
 
-(define depth*
-  (lambda (l)
-    (cond
-      ((null? l) 1)
-      ((atom? (car l) (depth* (cdr l))))
-      (else (let ([car-depth (add1 (depth* (car l)))]
-                  [cdr-depth (depth* (cdr l))])
-              (cond
-                ((o> cdr-depth car-depth) cdr-depth)
-                (else car-depth)))))))
+#;(define depth*
+    (lambda (l)
+      (cond
+        ((null? l) 1)
+        ((atom? (car l) (depth* (cdr l))))
+        (else (let ([car-depth (add1 (depth* (car l)))]
+                    [cdr-depth (depth* (cdr l))])
+                (cond
+                  ((o> cdr-depth car-depth) cdr-depth)
+                  (else car-depth)))))))
 
 (define max
   (lambda (n m)
@@ -297,3 +297,223 @@
                    (rm a (car l) oh)))
                 (cons (car l) (rm a (cdr l) oh))
                 (cons (rm a (car l) 0) (cdr l)))))))
+
+(define x null)
+
+(define dinerR
+  (lambda (food)
+    (set! x food)
+    (cons 'milkshake
+          (cons x
+                null))))
+
+(define omnivore
+  (let ([x 'minestrone])
+    (lambda (food)
+      (set! x food)
+      (cons food
+            (cons x
+                  null)))))
+
+(define food 'none)
+
+(define glutton
+  (lambda (x)
+    (set! food x)
+    (cons 'more
+          (cons food
+                (cons 'more
+                      (cons food
+                            null))))))
+
+(define chez-nous
+  (lambda ()
+    (let ([y x])
+      (set! x food)
+      (set! food y))))
+
+(define sweet-tooth
+  (lambda (food)
+    (cons food
+          (cons 'cake
+                null))))
+
+(define last 'angelfood)
+
+(define sweet-toothL
+  (lambda (food)
+    (set! last food)
+    (sweet-tooth food)))
+
+(define ingredients null)
+
+(define sweet-toothR
+  (lambda (food)
+    (set! ingredients (cons food ingredients))
+    (sweet-tooth food)))
+
+#;(define deep
+    (lambda (m)
+      (cond
+        ((zero? m) 'pizza)
+        (else (cons (deep (sub1 m)) null)))))
+
+#;(define Rs null)
+#;(define Ns null)
+
+#;(define deepR
+    (lambda (n)
+      (let ([res (deep n)])
+        (set! Rs (cons res Rs))
+        (set! Ns (cons n Ns))
+        res)))
+
+(define find
+  (lambda (n Ns Rs)
+    (letrec ([loop (lambda (Ns Rs)
+                     (cond
+                       ((null? Ns) #f)
+                       ((null? Rs) #f)
+                       ((o= n (car Ns)) (car Rs))
+                       (else (loop (cdr Ns) (cdr Rs)))))])
+      (loop Ns Rs))))
+
+#;(define deepM
+    (let ([Ns null]
+          [Rs null])
+      (lambda (n)
+        (let ([r (find n Ns Rs)])
+          (if (list? r)
+              r
+              (let ([res (deep n)])
+                (set! Rs (cons res Rs))
+                (set! Ns (cons n Ns))
+                res))))))
+
+#;(define deep
+  (lambda (m)
+    (cond
+      ((zero? m) 'pizza)
+      (else (cons (deepM (sub1 m)) null)))))
+
+#;(define length
+    (let ([h (lambda (l) 0)])
+      (set! h (lambda (l)
+                (cond
+                  ((null? l) 0)
+                  (else (add1 (h (cdr l)))))))
+      h))
+
+(define L
+  (lambda (length)
+    (lambda (l)
+      (cond
+        ((null? l) 0)
+        (else (add1 (length (cdr l))))))))
+
+(define Y!
+  (lambda (L)
+    (let ([h (lambda (l) 0)])
+      (set! h (L (lambda (a) (h a))))
+      (L h))))
+
+(define Y-bang
+  (lambda (f)
+    (letrec ([h (f (lambda (arg) (h arg)))])
+      h)))
+
+(define length
+  (Y! L))
+
+(define D
+  (lambda (depth*)
+    (lambda (l)
+      (cond
+        ((null? l) 1)
+        ((atom? (car l)) (depth* (cdr l)))
+        (else (let ([car-depth (add1 (depth* (car l)))]
+                    [cdr-depth (depth* (cdr l))])
+                (cond
+                  ((o> cdr-depth car-depth) cdr-depth)
+                  (else car-depth))))))))
+
+(define depth*
+  (Y! D))
+
+(define Y
+  (lambda (f)
+    ((lambda (g) (g g))
+     (lambda (x) (f (lambda (y) ((x x) y)))))))
+
+(define biz
+  (let ([x 0])
+    (lambda (f)
+      (set! x (add1 x))
+      (lambda (a)
+        (if (o= a x)
+            0
+            (f a))))))
+
+#;(define deepM
+  (let ([Ns null]
+        [Rs null]
+        [D (lambda (m)
+             (if (zero? m)
+                 'pizza
+                 (cons (deepM (sub1 m)) null)))])
+    (lambda (n)
+      (let ([r (find n Ns Rs)])
+        (if (list? r)
+            r
+            (let ([res (D n)])
+              (set! Rs (cons res Rs))
+              (set! Ns (cons n Ns))
+              res))))))
+
+(define counter #f)
+
+(define set-counter #f)
+
+(define consC
+  (let ([N 0])
+    (set! counter (lambda () N))
+    (set! set-counter (lambda (x) (set! N x)))
+    (lambda (x y)
+      (set! N (add1 N))
+      (cons x y))))
+
+(define deep
+  (lambda (m)
+    (cond
+      ((zero? m) 'pizza)
+      (else (consC (deep (sub1 m)) null)))))
+
+(define supercounter
+  (lambda (f)
+    (letrec
+        ([S (lambda (n)
+              (if (zero? n)
+                  (f n)
+                  (begin
+                    (f n)
+                     (S (sub1 n)))))])
+         (begin
+           (S 1000)
+           (counter)))))
+
+(define deepM
+  (let ([Ns null]
+        [Rs null]
+        [D (lambda (m)
+             (if (zero? m)
+                 'pizza
+                 (consC (deepM (sub1 m)) null)))])
+    (lambda (n)
+      (let ([r (find n Ns Rs)])
+        (if (list? r)
+            r
+            (let ([res (D n)])
+              (set! Rs (cons res Rs))
+              (set! Ns (cons n Ns))
+              res))))))
+      
