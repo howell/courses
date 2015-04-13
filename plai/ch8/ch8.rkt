@@ -94,7 +94,7 @@ are never removed from the store.
 
 (define (fetch [loc : Location] [sto : Store]) : Value
   (cond
-    [(empty? sto) (error 'lookup "location not found")]
+    [(empty? sto) (error 'fetch "location not found")]
     [else (cond
             [(equal? loc (cell-location (first sto))) (cell-val (first sto))]
             [else (fetch loc (rest sto))])]))
@@ -209,3 +209,104 @@ Represent this expression in ExprC:
         (boxC (numC 0))))
 
 (test (v*s-v (interp exercise mt-env mt-store)) (numV 2))
+
+#|
+Exercise
+Go through the interpreter; replace every reference to an updated store with a reference to one before update;
+make sure your test cases catch all the introduced errors!
+|#
+
+(define incS : ExprS
+  (lamS 'b (setboxS (idS 'b) (plusS (numS 1)
+                                    (unboxS (idS 'b))))))
+
+; plusC
+(test (v*s-v
+       (interpS
+        (letS 'b (boxS (numS 0))
+              (plusS (beginS (list (setboxS (idS 'b) (numS 1))
+                                   (numS 0)))
+                     (unboxS (idS 'b))))))
+      (numV 1))
+
+(test (v*s-v
+       (interpS
+        (letS 'b (boxS (numS 0))
+              (beginS (list (plusS (numS 0)
+                                   (beginS (list (setboxS (idS 'b) (numS 1))
+                                                 (numS 0))))
+                            (unboxS (idS 'b)))))))
+      (numV 1))
+
+; multC (copies of plusC tests)
+(test (v*s-v
+       (interpS
+        (letS 'b (boxS (numS 0))
+              (multS (beginS (list (setboxS (idS 'b) (numS 1))
+                                   (numS 2)))
+                     (unboxS (idS 'b))))))
+      (numV 2))
+
+(test (v*s-v
+       (interpS
+        (letS 'b (boxS (numS 0))
+              (beginS (list (multS (numS 0)
+                                   (beginS (list (setboxS (idS 'b) (numS 1))
+                                                 (numS 0))))
+                            (unboxS (idS 'b)))))))
+      (numV 1))
+
+; appC
+(test (v*s-v
+       (interpS
+        (letS 'b (boxS (numS 0))
+              (plusS (appS (beginS (list (setboxS (idS 'b) (numS 1))
+                                         (lamS 'x (idS 'x))))
+                           (beginS (list (appS incS (idS 'b))
+                                         (unboxS (idS 'b)))))
+                     (unboxS (idS 'b))))))
+      (numV 4))
+
+; boxC
+(test (v*s-v
+       (interpS
+        (letS 'b (boxS (numS 0))
+              (beginS (list (boxS (setboxS (idS 'b) (numS 1)))
+                            (unboxS (idS 'b)))))))
+      (numV 1))
+
+; unboxC
+(test (v*s-v
+       (interpS
+        (letS 'b (boxS (numS 0))
+              (unboxS (beginS (list (setboxS (idS 'b) (numS 1))
+                                    (idS 'b)))))))
+      (numV 1))
+
+(test (v*s-v
+       (interpS
+        (letS 'b (boxS (numS 0))
+              (plusS (unboxS (beginS (list (setboxS (idS 'b) (numS 1))
+                                           (idS 'b))))
+                     (unboxS (idS 'b))))))
+      (numV 2))
+
+; setboxC
+(test (v*s-v
+       (interpS
+        (letS 'b (boxS (numS 0))
+              (letS 'b2 (boxS (numS 0))
+                    (beginS (list (setboxS (beginS (list (appS incS (idS 'b2))
+                                                         (idS 'b)))
+                                           (appS incS (idS 'b2)))
+                                  (plusS (unboxS (idS 'b2))
+                                         (unboxS (idS 'b)))))))))
+      (numV 4))
+
+; seqC
+(test (v*s-v
+       (interpS
+        (letS 'b (boxS (numS 0))
+              (beginS (list (appS incS (idS 'b))
+                            (appS incS (idS 'b)))))))
+      (numV 2))
