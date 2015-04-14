@@ -22,7 +22,10 @@ Augment the language with the journal features of software transactional memory 
   [boxC (arg : ExprC)]
   [unboxC (arg : ExprC)]
   [setboxC (b : ExprC) (v : ExprC)]
-  [seqC (b1 : ExprC) (b2 : ExprC)])
+  [seqC (b1 : ExprC) (b2 : ExprC)]
+  [newjournalC]
+  [commitC]
+  [discardC])
 
 (define-type ExprS
   [numS (n : number)]
@@ -36,17 +39,22 @@ Augment the language with the journal features of software transactional memory 
   [setboxS (b : ExprS) (v : ExprS)]
   [seqS (b1 : ExprS) (b2 : ExprS)]
   [letS (s : symbol) (e : ExprS) (b : ExprS)]
-  [beginS (es : (listof ExprS))])
+  [beginS (es : (listof ExprS))]
+  [newjournalS]
+  [commitS]
+  [discardS]
+  [atomicS (e : ExprS)])
 
 (define-type Value
   [numV (n : number)]
   [closV (arg : symbol) (body : ExprC) (env : Env)]
-  [boxV (l : Location)])
+  [boxV (l : Location)]
+  [unitV])
 
 (define-type-alias Location number)
 
 (define-type Binding
-  [bind (name : symbol) (val : Location)])
+  [bind (name : symbol) (val : Value)])
 
 (define-type-alias Env (listof Binding))
 (define mt-env empty)
@@ -62,14 +70,22 @@ Augment the language with the journal features of software transactional memory 
 (define-type JournalEntry
   [write-entry (location : Location) (val : Value)])
 
-(define-type-alias Journal (listof JournalEntry))
-(define mt-journal empty)
-(define write-journal cons)
+(define-type Journal
+  [inactiveJ]
+  [activeJ (log : (listof JournalEntry))])
+
+(define mt-journal
+  (activeJ empty))
+
+(define (write-journal [e : JournalEntry] [j : Journal]) : Journal
+  (type-case Journal j
+    [inactiveJ () (error 'write-journal "wrote to inactive journal")]
+    [activeJ (l) (activeJ (cons e l))]))
 
 (define-type Result
   [v*s (v : Value) (s : Store) (j : Journal)])
 
-(define (lookup [x : symbol] [env : Env]) : Location
+(define (lookup [x : symbol] [env : Env]) : Value
   (cond
     [(empty? env) (error 'lookup "name not found")]
     [else (cond
@@ -83,15 +99,27 @@ Augment the language with the journal features of software transactional memory 
             [(equal? loc (cell-location (first sto))) (cell-val (first sto))]
             [else (fetch loc (rest sto))])]))
 
-(define (journal-lookup [loc : Location] [journal : Journal] [sto : Store]) : Value
-  (cond
-    [(empty? journal) (fetch loc sto)]
-    [else (cond
-            [(equal? loc (write-entry-location (first journal))) (write-entry-val (first journal))]
-            [else (journal-lookup loc (rest journal) sto)])]))
+(define (commit-journal [j : Journal] [s : Store]) : Store
+  (local ([define (write-entries es s)
+            (cond
+              [(empty? es) s]
+              [else (cons (cell (write-entry-location (first es))
+                                (write-entry-val (first es)))
+                          (write-entries (rest es) s))])])
+    (type-case Journal j
+      [inactiveJ () s]
+      [activeJ (l) (write-entries l s)])))
 
-(define (read-var [x : symbol] [env : Env] [journal : Journal] [sto : Store]) : Value
-  (journal-lookup (lookup x env) journal sto))
+; look inside the journal before checking the store
+(define (fetchJ [loc : Location] [journal : Journal] [sto : Store]) : Value
+  (type-case Journal journal
+    [inactiveJ () (fetch loc sto)]
+    [activeJ (log) (local ([define (loop log)
+                             (cond
+                               [(empty? log) (fetch loc sto)]
+                               [(equal? loc (write-entry-location (first log))) (write-entry-val (first log))]
+                               [else (loop (rest log))])])
+                     (loop log))]))
 
 (define (num+ [l : Value] [r : Value]) : Value
   (cond
@@ -119,61 +147,78 @@ Augment the language with the journal features of software transactional memory 
     [beginS (es) (cond
                    [(empty? es) (error 'desugar "empty begin sequence")]
                    [(empty? (rest es)) (desugar (first es))]
-                   [else (seqC (desugar (first es)) (desugar (beginS (rest es))))])]))
+                   [else (seqC (desugar (first es)) (desugar (beginS (rest es))))])]
+    [newjournalS () (newjournalC)]
+    [commitS () (commitC)]
+    [discardS () (discardC)]
+    [atomicS (e) (seqC (newjournalC) (seqC (desugar e) (commitC)))]))
 
-(define (interp [expr : ExprC] [env : Env] [sto : Store]) : Result
+(define (interp [expr : ExprC] [env : Env] [sto : Store] [journal : Journal]) : Result
   (type-case ExprC expr
-    [numC (n) (v*s (numV n) sto)]
-    [plusC (l r) (type-case Result (interp l env sto)
-                   [v*s (v-l s-l)
-                        (type-case Result (interp r env s-l)
-                          [v*s (v-r s-r)
-                               (v*s (num+ v-l v-r) s-r)])])]
-    
-    [multC (l r) (type-case Result (interp l env sto)
-                   [v*s (v-l s-l)
-                        (type-case Result (interp r env s-l)
-                          [v*s (v-r s-r)
-                               (v*s (num* v-l v-r) s-r)])])]
-    [idC (s) (v*s (fetch (lookup s env) sto) sto)]
-    [lamC (a b) (v*s (closV a b env) sto)]
-    [appC (f a) (type-case Result (interp f env sto)
-                  [v*s (v-f s-f)
+    [numC (n) (v*s (numV n) sto journal)]
+    [plusC (l r) (type-case Result (interp l env sto journal)
+                   [v*s (v-l s-l j-l)
+                        (type-case Result (interp r env s-l j-l)
+                          [v*s (v-r s-r j-r)
+                               (v*s (num+ v-l v-r) s-r j-r)])])]
+    [multC (l r) (type-case Result (interp l env sto journal)
+                   [v*s (v-l s-l j-l)
+                        (type-case Result (interp r env s-l j-l)
+                          [v*s (v-r s-r j-r)
+                               (v*s (num* v-l v-r) s-r j-r)])])]
+    [idC (s) (v*s (lookup s env) sto journal)]
+    [lamC (a b) (v*s (closV a b env) sto journal)]
+    [appC (f a) (type-case Result (interp f env sto journal)
+                  [v*s (v-f s-f j-f)
                        (type-case Value v-f
                          [numV (_) (error 'appC "applied number")]
                          [boxV (_) (error 'appC "applied box")]
+                         [unitV () (error 'appC "applied unit")]
                          [closV (arg body clos-env)
-                                (type-case Result (interp a env s-f)
-                                  [v*s (v-a s-a)
-                                       (let ([where (new-loc)])
-                                         (interp body
-                                                 (extend-env (bind arg where)
-                                                             clos-env)
-                                                 (override-store (cell where v-a) s-a)))])])])]
-    [boxC (e) (type-case Result (interp e env sto)
-                [v*s (v1 s1)
+                                (type-case Result (interp a env s-f j-f)
+                                  [v*s (v-a s-a j-a)
+                                       (interp body
+                                               (extend-env (bind arg v-a)
+                                                           clos-env)
+                                               s-a
+                                               j-a)])])])]
+    [boxC (e) (type-case Result (interp e env sto journal)
+                [v*s (v1 s1 j1)
                      (let ([where (new-loc)])
-                       (v*s (boxV where)
-                            (override-store (cell where v1) s1)))])]
-    [unboxC (e) (type-case Result (interp e env sto)
-                  [v*s (v1 s1)
+                       (type-case Journal j1
+                         [inactiveJ () (v*s (boxV where)
+                                            (override-store (cell where v1) s1)
+                                            j1)]
+                         [activeJ (_) (v*s (boxV where)
+                                           s1
+                                           (write-journal (write-entry where v1) j1))]))])]
+    [unboxC (e) (type-case Result (interp e env sto journal)
+                  [v*s (v1 s1 j1)
                        (type-case Value v1
-                         [boxV (l) (v*s (fetch l s1) s1)]
+                         [boxV (l) (v*s (fetchJ l j1 s1) s1 j1)]
                          [else (error 'unbox "expected box")])])]
-    [setboxC (b e) (type-case Result (interp b env sto)
-                     [v*s (v-b s-b)
+    [setboxC (b e) (type-case Result (interp b env sto journal)
+                     [v*s (v-b s-b j-b)
                           (type-case Value v-b
-                            [boxV (l) (type-case Result (interp e env s-b)
-                                        [v*s (v-e s-e)
-                                             (v*s v-e
-                                                  (override-store (cell l v-e) s-e))])]
+                            [boxV (l) (type-case Result (interp e env s-b j-b)
+                                        [v*s (v-e s-e j-e)
+                                             (type-case Journal j-e
+                                               [inactiveJ () (v*s v-e
+                                                                  (override-store (cell l v-e) s-e)
+                                                                  j-e)]
+                                               [activeJ (_) (v*s v-e
+                                                                 s-e
+                                                                 (write-journal (write-entry l v-e) j-e))])])]
                             [else (error 'setbox "expected box")])])]
-    [seqC (e1 e2) (type-case Result (interp e1 env sto)
-                    [v*s (v1 s1)
-                         (interp e2 env s1)])]))
+    [seqC (e1 e2) (type-case Result (interp e1 env sto journal)
+                    [v*s (v1 s1 j1)
+                         (interp e2 env s1 j1)])]
+    [newjournalC () (v*s (unitV) sto mt-journal)]
+    [commitC () (v*s (unitV) (commit-journal journal sto) (inactiveJ))]
+    [discardC () (v*s (unitV) sto (inactiveJ))]))
 
 (define (interpS [expr : ExprS]) : Result
-  (interp (desugar expr) mt-env mt-store))
+  (interp (desugar expr) mt-env mt-store (inactiveJ)))
 
 (test (desugar (beginS (list (numS 1) (numS 2) (numS 3))))
       (seqC (numC 1) (seqC (numC 2) (numC 3))))
@@ -281,3 +326,35 @@ Augment the language with the journal features of software transactional memory 
               (beginS (list (appS incS (idS 'b))
                             (appS incS (idS 'b)))))))
       (numV 2))
+
+; stm
+; discard loses a write
+(test (v*s-v
+       (interpS
+        (letS 'b (boxS (numS 0))
+              (beginS (list (newjournalS)
+                            (setboxS (idS 'b) (numS 1))
+                            (discardS)
+                            (unboxS (idS 'b)))))))
+      (numV 0))
+
+; read modification before discarding
+(test (v*s-v
+       (interpS
+        (letS 'b (boxS (numS 0))
+              (beginS (list (newjournalS)
+                            (setboxS (idS 'b) (numS 1))
+                            (letS 'v (unboxS (idS 'b))
+                                  (beginS (list (discardS)
+                                                (idS 'v)))))))))
+      (numV 1))
+
+; read modification after commiting
+(test (v*s-v
+       (interpS
+        (letS 'b (boxS (numS 0))
+              (beginS (list (newjournalS)
+                            (setboxS (idS 'b) (numS 1))
+                            (commitS)
+                            (unboxS (idS 'b)))))))
+      (numV 1))
