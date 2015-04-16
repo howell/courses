@@ -170,3 +170,49 @@ Rewrite this block of code using self-application instead of mutation.
 
 (test (msg a-tree/size 'add) (+ 10 5 15 6))
 (test (msg/self a-tree/size 'size) 4)
+
+#|
+Exercise
+The code above is fundamentally broken. The self reference is to the same syntactic object, whereas it needs to refer to the most-refined object: this is known as open
+recursion.
+Modify the object representations so that self always refers to the most refined version of the object. Hint: You will find the self-application method
+(Self-Reference Without Mutation) of recursion handy.
+|#
+
+(define (Y f)
+  ((lambda (g) (f (lambda (x) ((g g) x)))) (lambda (g) (f (lambda (x) ((g g) x))))))
+
+#|
+Exercise
+Modify the inheritance pattern above to implement a Self-like, prototype-based language, instead of a class-based language. Because classes provide each object with
+distinct copies of their parent objects, a prototype-language might provide a clone operation to simplify creation of the operation that simulates classes atop prototypes.
+|#
+
+(define (node/size/proto parent v l r)
+  (lambda (m)
+    (case m
+      [(size) (lambda (self) (+ 1
+                                (msg/self l 'size)
+                                (msg/self r 'size)))]
+      [else (parent m)])))
+
+(define (mt/size/proto parent)
+  (lambda (m)
+    (case m
+      [(size) (lambda (self) 0)]
+      [else (parent m)])))
+
+(define (mk-node/size/proto v l r)
+  (node/size/proto (node v l r)
+                   v l r))
+
+(define a-tree/size/proto
+  (mk-node/size/proto
+   10
+   (mk-node/size/proto 5 (mt/size/proto (mt)) (mt/size/proto (mt)))
+   (mk-node/size/proto 15
+                       (mk-node/size/proto 6 (mt/size/proto (mt)) (mt/size/proto (mt)))
+                       (mt/size/proto (mt)))))
+
+(test (msg a-tree/size/proto 'add) (+ 10 5 15 6))
+(test (msg/self a-tree/size/proto 'size) 4)
