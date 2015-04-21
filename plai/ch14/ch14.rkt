@@ -68,7 +68,7 @@ We use the value of cookie instead of the closed over value, so the result will 
 
 (define-syntax (cps e)
   (syntax-case e (with rec lam cnd seq set quote display read-number generator let/cc)
-    [(_ (with (e) b))
+    [(_ (with (v e) b))
      #'(cps ((lam (v) b) e))]
     [(_ (rec (v f) b))
      #'(cps (with (v (lam (arg) (error 'dummy "nothing")))
@@ -181,3 +181,21 @@ We use the value of cookie instead of the closed over value, so the result will 
 
 (test (run (cps (+ 1 (let/cc esc (+ 2 (esc 3))))))
       4)
+
+(define gen-ex
+  (cps (with (g (generator (yield) (from)
+                           (rec (f (lam (n)
+                                        (seq
+                                         (yield n)
+                                         (f (+ n 1)))))
+                             (f from))))
+             (seq
+              (display (g 12))
+              (seq (display (g 0))
+                   (seq (display (g 0))
+                        (display (g 0))))))))
+
+#|
+Exercise
+Using let/cc and macros, create a throw/catch mechanism.
+|#
