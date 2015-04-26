@@ -89,15 +89,15 @@ Define the types and functions associated with type environments.
                             (funT ta tb)
                             (error 'lam "return type mismatch")))]
     [recC (f a aT rT b u)
-      (let ([extended-env
-             (extend-tyenv (tybind f (funT aT rT)) tenv)])
-        (cond
-          [(not (equal? rT (tc b
-                               (extend-tyenv
-                                (tybind a aT)
-                                extended-env))))
-           (error 'tc "body return type not correct")]
-          [else (tc u extended-env)]))]))
+          (let ([extended-env
+                 (extend-tyenv (tybind f (funT aT rT)) tenv)])
+            (cond
+              [(not (equal? rT (tc b
+                                   (extend-tyenv
+                                    (tybind a aT)
+                                    extended-env))))
+               (error 'tc "body return type not correct")]
+              [else (tc u extended-env)]))]))
 
 ;; (numT -> (numT -> numT)) -> (numT -> numT)
 (define list-ty
